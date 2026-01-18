@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <button class="tool-btn active" onclick="setTool('add')" title="Ajouter routeur" id="addBtn">
+            ➕
+        </button>
+        <button class="tool-btn" onclick="setTool('connect')" title="Relier routeurs" id="connectBtn">
+            🔗
+        </button>
+        <div class="separator"></div>
+        <button class="tool-btn" onclick="clearAll()" title="Tout effacer">
+            🗑️
+        </button>
+        <span class="toolbar-text" id="toolStatus">Cliquez pour ajouter un routeur</span>
+    </div>
+
+    <div id="sidebar">
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Statistiques</div>
+                <div class="info-item">
+                    <span class="info-label">Routeurs</span>
+                    <span class="info-value" id="count">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Connexions</span>
+                    <span class="info-value" id="connectionCount">0</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-title">Liste des routeurs</div>
+                <div class="router-list" id="routerList">
+                    <div style="color: #666; font-size: 12px; text-align: center; padding: 20px;">
+                        Aucun routeur
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <button class="btn-calculate" onclick="calculateRouting()">
+                    Calculer tables de routage
+                </button>
+            </div>
+            
+            <div class="sidebar-section" id="routingSection" style="display: none;">
+                <div class="sidebar-title">Tables de routage</div>
+                <div class="routing-table" id="routingTable"></div>
+            </div>
+        </div>
+        <div class="sidebar-resizer" id="sidebarResizer"></div>
+    </div>
+    
+    <!-- Workspace -->
+    <div id="workspace">
+        <svg id="connections"></svg>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
