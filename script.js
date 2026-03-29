@@ -10,44 +10,44 @@ let currentTool = 'add';
 let selectedRouter = null;
 let notificationQueue = [];
 
-// Fonction pour obtenir la largeur actuelle de la sidebar
-function getSidebarWidth() {
-    return parseInt(sidebar.style.width) || 280;
+function getToolbarHeight() {
+    const el = document.getElementById('toolbar');
+    return el ? el.offsetHeight : 52;
 }
 
 function showNotification(message, type = 'info') {
     if (notificationQueue.length >= 3) {
         const oldest = notificationQueue.shift();
-        oldest.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => oldest.remove(), 300);
+        oldest.style.animation = 'slideOut 0.25s ease forwards';
+        setTimeout(() => oldest.remove(), 250);
     }
-    
+
     const notif = document.createElement('div');
     notif.className = `notification ${type}`;
     notif.textContent = message;
-    
-    notif.style.top = `${60 + notificationQueue.length * 70}px`;
-    
+
+    notif.style.top = `${getToolbarHeight() + 12 + notificationQueue.length * 56}px`;
+
     document.body.appendChild(notif);
     notificationQueue.push(notif);
-    
+
     setTimeout(() => {
         const index = notificationQueue.indexOf(notif);
         if (index > -1) {
             notificationQueue.splice(index, 1);
-            notif.style.animation = 'slideOut 0.3s ease-out';
+            notif.style.animation = 'slideOut 0.25s ease forwards';
             setTimeout(() => {
                 notif.remove();
                 updateNotificationPositions();
-            }, 300);
+            }, 250);
         }
     }, 3000);
 }
 
 function updateNotificationPositions() {
     notificationQueue.forEach((notif, index) => {
-        notif.style.top = `${60 + index * 70}px`;
-        notif.style.transition = 'top 0.3s ease-out';
+        notif.style.top = `${getToolbarHeight() + 12 + index * 56}px`;
+        notif.style.transition = 'top 0.25s ease';
     });
 }
 
@@ -55,25 +55,31 @@ function setTool(tool) {
     currentTool = tool;
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
     });
-    
+
     if (tool === 'add') {
-        document.getElementById('addBtn').classList.add('active');
+        const b = document.getElementById('addBtn');
+        b.classList.add('active');
+        b.setAttribute('aria-pressed', 'true');
         workspace.style.cursor = 'crosshair';
-        document.getElementById('toolStatus').textContent = 'Cliquez pour ajouter un routeur';
+        document.getElementById('toolStatus').textContent = 'Cliquez sur le graphe pour placer un routeur.';
     } else if (tool === 'connect') {
-        document.getElementById('connectBtn').classList.add('active');
+        const b = document.getElementById('connectBtn');
+        b.classList.add('active');
+        b.setAttribute('aria-pressed', 'true');
         workspace.style.cursor = 'pointer';
-        document.getElementById('toolStatus').textContent = 'Sélectionnez deux routeurs à relier';
+        document.getElementById('toolStatus').textContent = 'Cliquez sur deux routeurs pour les relier.';
     }
-    
+
     selectedRouter = null;
     updateRouterVisuals();
 }
 
 workspace.addEventListener('click', function(e) {
     if (e.target === workspace && currentTool === 'add') {
-        addRouter(e.clientX - getSidebarWidth(), e.clientY - 45);
+        const rect = workspace.getBoundingClientRect();
+        addRouter(e.clientX - rect.left, e.clientY - rect.top);
     }
 });
 
@@ -82,37 +88,38 @@ function addRouter(x, y) {
         showNotification('Maximum 26 routeurs (A-Z)', 'warning');
         return;
     }
-    
+
     const letter = String.fromCharCode(65 + routers.length);
-    
+
     const routerDiv = document.createElement('div');
     routerDiv.className = 'router';
     routerDiv.textContent = letter;
-    routerDiv.style.left = (x - 30) + 'px';
-    routerDiv.style.top = (y - 30) + 'px';
+    const half = 24;
+    routerDiv.style.left = x - half + 'px';
+    routerDiv.style.top = y - half + 'px';
     routerDiv.dataset.id = letter;
-    
+
     routerDiv.addEventListener('mousedown', function(e) {
         e.stopPropagation();
-        
+
         if (currentTool === 'connect') {
             handleRouterClick(letter);
         } else if (currentTool === 'add') {
             draggedRouter = routerDiv;
             const rect = workspace.getBoundingClientRect();
-            offsetX = e.clientX - rect.left - parseInt(routerDiv.style.left);
-            offsetY = e.clientY - rect.top - parseInt(routerDiv.style.top);
+            offsetX = e.clientX - rect.left - parseInt(routerDiv.style.left, 10);
+            offsetY = e.clientY - rect.top - parseInt(routerDiv.style.top, 10);
             routerDiv.classList.add('dragging');
         }
     });
-    
+
     workspace.appendChild(routerDiv);
-    
+
     routers.push({
         id: letter,
         element: routerDiv
     });
-    
+
     showNotification(`Routeur ${letter} ajouté`, 'success');
     updateUI();
 }
@@ -121,14 +128,14 @@ function handleRouterClick(routerId) {
     if (!selectedRouter) {
         selectedRouter = routerId;
         updateRouterVisuals();
-        document.getElementById('toolStatus').textContent = `Routeur ${routerId} sélectionné. Cliquez sur un autre`;
+        document.getElementById('toolStatus').textContent = `Routeur ${routerId} sélectionné — choisissez l’autre.`;
         showNotification(`Routeur ${routerId} sélectionné`, 'info');
     } else {
         if (selectedRouter !== routerId) {
             addConnection(selectedRouter, routerId);
-            document.getElementById('toolStatus').textContent = 'Sélectionnez deux routeurs à relier';
+            document.getElementById('toolStatus').textContent = 'Cliquez sur deux routeurs pour les relier.';
         } else {
-            showNotification('Sélectionnez un autre routeur', 'warning');
+            showNotification('Choisissez un autre routeur', 'warning');
         }
         selectedRouter = null;
         updateRouterVisuals();
@@ -146,34 +153,36 @@ function updateRouterVisuals() {
 }
 
 function addConnection(from, to) {
-    const exists = connections.find(c => 
-        (c.from === from && c.to === to) || (c.from === to && c.to === from)
+    const exists = connections.find(
+        c => (c.from === from && c.to === to) || (c.from === to && c.to === from)
     );
-    
+
     if (exists) {
-        showNotification('Connexion déjà existante', 'error');
+        showNotification('Cette connexion existe déjà', 'error');
         return;
     }
-    
+
     connections.push({ from, to });
     drawConnections();
-    showNotification(`Connexion ${from} ↔ ${to} créée`, 'success');
+    showNotification(`Connexion ${from} ↔ ${to}`, 'success');
     updateUI();
 }
 
 function drawConnections() {
     svg.innerHTML = '';
-    
+
+    const c = 24;
+
     connections.forEach(conn => {
         const fromRouter = routers.find(r => r.id === conn.from);
         const toRouter = routers.find(r => r.id === conn.to);
-        
+
         if (fromRouter && toRouter) {
-            const x1 = parseInt(fromRouter.element.style.left) + 30;
-            const y1 = parseInt(fromRouter.element.style.top) + 30;
-            const x2 = parseInt(toRouter.element.style.left) + 30;
-            const y2 = parseInt(toRouter.element.style.top) + 30;
-            
+            const x1 = parseInt(fromRouter.element.style.left, 10) + c;
+            const y1 = parseInt(fromRouter.element.style.top, 10) + c;
+            const x2 = parseInt(toRouter.element.style.left, 10) + c;
+            const y2 = parseInt(toRouter.element.style.top, 10) + c;
+
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             line.setAttribute('x1', x1);
             line.setAttribute('y1', y1);
@@ -190,10 +199,10 @@ document.addEventListener('mousemove', function(e) {
         const rect = workspace.getBoundingClientRect();
         const newX = e.clientX - rect.left - offsetX;
         const newY = e.clientY - rect.top - offsetY;
-        
+
         draggedRouter.style.left = newX + 'px';
         draggedRouter.style.top = newY + 'px';
-        
+
         drawConnections();
     }
 });
@@ -214,7 +223,7 @@ function deleteRouter(routerId) {
         drawConnections();
         showNotification(`Routeur ${routerId} supprimé`, 'success');
         updateUI();
-        document.getElementById('routingSection').style.display = 'none';
+        document.getElementById('routingSection').hidden = true;
     }
 }
 
@@ -225,90 +234,88 @@ function clearAll() {
         connections = [];
         selectedRouter = null;
         svg.innerHTML = '';
-        document.getElementById('routingSection').style.display = 'none';
-        showNotification('Tout a été effacé', 'info');
+        document.getElementById('routingSection').hidden = true;
+        showNotification('Graphe réinitialisé', 'info');
         updateUI();
     }
 }
 
 function calculateRouting() {
     if (routers.length === 0) {
-        showNotification('Ajoutez des routeurs d\'abord', 'warning');
+        showNotification('Ajoutez d’abord des routeurs', 'warning');
         return;
     }
-    
+
     if (connections.length === 0) {
-        showNotification('Créez des connexions d\'abord', 'warning');
+        showNotification('Créez d’abord des connexions', 'warning');
         return;
     }
-    
+
     const tables = {};
-    
+
     routers.forEach(router => {
         tables[router.id] = dijkstra(router.id);
     });
-    
+
     displayRoutingTables(tables);
-    showNotification('Tables de routage calculées', 'success');
+    showNotification('Routage calculé', 'success');
 }
 
 function dijkstra(start) {
     const distances = {};
     const previous = {};
     const unvisited = new Set();
-    
+
     routers.forEach(r => {
         distances[r.id] = Infinity;
         previous[r.id] = null;
         unvisited.add(r.id);
     });
-    
+
     distances[start] = 0;
-    
+
     while (unvisited.size > 0) {
         let current = null;
         let minDist = Infinity;
-        
+
         unvisited.forEach(node => {
             if (distances[node] < minDist) {
                 minDist = distances[node];
                 current = node;
             }
         });
-        
+
         if (current === null) break;
-        
+
         unvisited.delete(current);
-        
-        const neighbors = connections.filter(c => 
-            c.from === current || c.to === current
-        );
-        
+
+        const neighbors = connections.filter(c => c.from === current || c.to === current);
+
         neighbors.forEach(conn => {
             const neighbor = conn.from === current ? conn.to : conn.from;
             const alt = distances[current] + 1;
-            
+
             if (alt < distances[neighbor]) {
                 distances[neighbor] = alt;
                 previous[neighbor] = current;
             }
         });
     }
-    
+
     const routingTable = {};
     routers.forEach(r => {
         if (r.id !== start) {
             let nextHop = r.id;
             let current = r.id;
-            
+
             while (previous[current] !== start && previous[current] !== null) {
                 current = previous[current];
             }
-            
+
             if (previous[current] === start) {
                 nextHop = current;
             }
-            
+
             routingTable[r.id] = {
                 destination: r.id,
                 nextHop: distances[r.id] === Infinity ? '-' : nextHop,
@@ -316,20 +323,20 @@ function dijkstra(start) {
             };
         }
     });
-    
+
     return routingTable;
 }
 
 function displayRoutingTables(tables) {
     const container = document.getElementById('routingTable');
     container.innerHTML = '';
-    
+
     Object.keys(tables).forEach(routerId => {
         const routerDiv = document.createElement('div');
         routerDiv.className = 'router-name';
         routerDiv.textContent = `Routeur ${routerId}`;
         container.appendChild(routerDiv);
-        
+
         const table = document.createElement('table');
         table.innerHTML = `
             <tr>
@@ -338,7 +345,7 @@ function displayRoutingTables(tables) {
                 <th>Distance</th>
             </tr>
         `;
-        
+
         Object.values(tables[routerId]).forEach(route => {
             const row = table.insertRow();
             row.innerHTML = `
@@ -347,34 +354,37 @@ function displayRoutingTables(tables) {
                 <td>${route.distance}</td>
             `;
         });
-        
+
         container.appendChild(table);
     });
-    
-    document.getElementById('routingSection').style.display = 'block';
+
+    document.getElementById('routingSection').hidden = false;
 }
 
 function updateUI() {
     document.getElementById('count').textContent = routers.length;
     document.getElementById('connectionCount').textContent = connections.length;
-    
+
     const listDiv = document.getElementById('routerList');
     if (routers.length === 0) {
-        listDiv.innerHTML = '<div style="color: #666; font-size: 12px; text-align: center; padding: 20px;">Aucun routeur</div>';
+        listDiv.innerHTML = '<p class="router-list-empty">Aucun routeur pour l’instant.</p>';
     } else {
-        listDiv.innerHTML = routers.map(r => `
+        listDiv.innerHTML = routers
+            .map(
+                r => `
             <div class="router-item">
                 <div class="router-item-left">
                     <div class="router-badge">${r.id}</div>
                     <span>Routeur ${r.id}</span>
                 </div>
-                <button class="btn-delete-router" onclick="deleteRouter('${r.id}')">✕</button>
+                <button type="button" class="btn-delete-router" onclick="deleteRouter('${r.id}')" title="Supprimer" aria-label="Supprimer le routeur ${r.id}">×</button>
             </div>
-        `).join('');
+        `
+            )
+            .join('');
     }
 }
 
-// Système de resize de la sidebar
 const resizer = document.getElementById('sidebarResizer');
 let isResizing = false;
 
@@ -387,15 +397,13 @@ resizer.addEventListener('mousedown', function(e) {
 
 document.addEventListener('mousemove', function(e) {
     if (!isResizing) return;
-    
-    let newWidth = e.clientX;
-    
-    if (newWidth < 200) newWidth = 200;
-    if (newWidth > 600) newWidth = 600;
-    
+
+    let newWidth = window.innerWidth - e.clientX;
+    if (newWidth < 220) newWidth = 220;
+    if (newWidth > 560) newWidth = 560;
+
     sidebar.style.width = newWidth + 'px';
-    workspace.style.left = newWidth + 'px';
-    
+    workspace.style.right = newWidth + 'px';
     drawConnections();
 });
 

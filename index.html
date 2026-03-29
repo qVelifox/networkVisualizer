@@ -4,65 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <!-- Toolbar -->
-    <div id="toolbar">
-        <button class="tool-btn active" onclick="setTool('add')" title="Ajouter routeur" id="addBtn">
-            ➕
-        </button>
-        <button class="tool-btn" onclick="setTool('connect')" title="Relier routeurs" id="connectBtn">
-            🔗
-        </button>
-        <div class="separator"></div>
-        <button class="tool-btn" onclick="clearAll()" title="Tout effacer">
-            🗑️
-        </button>
-        <span class="toolbar-text" id="toolStatus">Cliquez pour ajouter un routeur</span>
-    </div>
-
-    <div id="sidebar">
-        <div class="sidebar-content">
-            <div class="sidebar-section">
-                <div class="sidebar-title">Statistiques</div>
-                <div class="info-item">
-                    <span class="info-label">Routeurs</span>
-                    <span class="info-value" id="count">0</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Connexions</span>
-                    <span class="info-value" id="connectionCount">0</span>
-                </div>
+<body class="app">
+    <header id="toolbar" class="app-toolbar">
+        <div class="toolbar-inner">
+            <div class="toolbar-brand">
+                <span class="toolbar-title">Network Visualizer</span>
             </div>
-            
-            <div class="sidebar-section">
-                <div class="sidebar-title">Liste des routeurs</div>
-                <div class="router-list" id="routerList">
-                    <div style="color: #666; font-size: 12px; text-align: center; padding: 20px;">
-                        Aucun routeur
+            <nav class="toolbar-tools" role="toolbar" aria-label="Outils">
+                <button type="button" class="tool-btn active" onclick="setTool('add')" title="Ajouter un routeur" aria-label="Ajouter un routeur" aria-pressed="true" id="addBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span>Ajouter</span>
+                </button>
+                <button type="button" class="tool-btn" onclick="setTool('connect')" title="Relier deux routeurs" aria-label="Relier deux routeurs" aria-pressed="false" id="connectBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM10.5 9.5l3 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    <span>Relier</span>
+                </button>
+                <button type="button" class="tool-btn tool-btn--ghost" onclick="clearAll()" title="Tout effacer" aria-label="Tout effacer">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7h14z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Effacer</span>
+                </button>
+            </nav>
+            <p class="toolbar-hint" id="toolStatus">Cliquez sur le graphe pour placer un routeur.</p>
+        </div>
+    </header>
+
+    <!-- Canvas en premier (zone principale à gauche) -->
+    <main id="workspace" class="app-workspace" aria-label="Graphe">
+        <svg id="connections" aria-hidden="true"></svg>
+    </main>
+
+    <aside id="sidebar" class="app-sidebar" aria-label="Panneau latéral">
+        <div class="sidebar-resizer" id="sidebarResizer" role="separator" aria-orientation="vertical" title="Redimensionner le panneau"></div>
+        <div class="sidebar-content">
+            <section class="panel">
+                <h2 class="panel-title">Résumé</h2>
+                <div class="stat-row">
+                    <div class="stat-block">
+                        <span class="stat-block__label">Routeurs</span>
+                        <span class="stat-block__value" id="count">0</span>
+                    </div>
+                    <div class="stat-block">
+                        <span class="stat-block__label">Connexions</span>
+                        <span class="stat-block__value" id="connectionCount">0</span>
                     </div>
                 </div>
-            </div>
-            
-            <div class="sidebar-section">
-                <button class="btn-calculate" onclick="calculateRouting()">
-                    Calculer tables de routage
-                </button>
-            </div>
-            
-            <div class="sidebar-section" id="routingSection" style="display: none;">
-                <div class="sidebar-title">Tables de routage</div>
+            </section>
+
+            <section class="panel">
+                <h2 class="panel-title">Liste</h2>
+                <div class="router-list" id="routerList">
+                    <p class="router-list-empty">Aucun routeur pour l’instant.</p>
+                </div>
+            </section>
+
+            <section class="panel">
+                <button type="button" class="btn-primary" onclick="calculateRouting()">Calculer le routage</button>
+                <p class="panel-footnote">Plus courts chemins (Dijkstra), une table par routeur.</p>
+            </section>
+
+            <section class="panel routing-panel" id="routingSection" hidden>
+                <h2 class="panel-title">Tables de routage</h2>
                 <div class="routing-table" id="routingTable"></div>
-            </div>
+            </section>
         </div>
-        <div class="sidebar-resizer" id="sidebarResizer"></div>
-    </div>
-    
-    <!-- Workspace -->
-    <div id="workspace">
-        <svg id="connections"></svg>
-    </div>
+    </aside>
 
     <script src="script.js"></script>
 </body>
